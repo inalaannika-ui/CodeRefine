@@ -1,0 +1,4 @@
+flask
+openai
+pylint 
+autopep8

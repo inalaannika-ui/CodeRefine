@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>CodeRefine</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs/loader.min.js"></script>
+</head>
+
+<body>
+
+<h1>CodeRefine</h1>
+<p>AI Code Analyzer</p>
+
+<input type="file" id="fileInput">
+
+<br><br>
+
+<div id="editor" style="width:800px;height:400px;border:1px solid gray;"></div>
+
+<br>
+
+<button onclick="analyzeCode()">Analyze Code</button>
+
+<button onclick="copyCode()">Copy Refined Code</button>
+
+<button onclick="downloadCode()">Download Code</button>
+
+<div id="result"></div>
+
+<script>
+
+require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs' }});
+
+let editor;
+let refinedCode="";
+
+require(["vs/editor/editor.main"], function () {
+
+editor = monaco.editor.create(document.getElementById("editor"), {
+value: "print('Hello CodeRefine')",
+language: "python",
+theme: "vs-dark"
+});
+
+});
+
+document.getElementById("fileInput").addEventListener("change", function(e){
+
+let file = e.target.files[0];
+
+let reader = new FileReader();
+
+reader.onload = function(event){
+editor.setValue(event.target.result);
+}
+
+reader.readAsText(file);
+
+});
+
+function analyzeCode(){
+
+let code = editor.getValue();
+
+fetch("/analyze",{
+method:"POST",
+headers:{
+"Content-Type":"application/json"
+},
+body:JSON.stringify({code:code})
+})
+.then(response=>response.json())
+.then(data=>{
+
+refinedCode=data.refined_code;
+
+document.getElementById("result").innerHTML=
+
+"<div style='display:flex;gap:40px'>"+
+
+"<div><h3>Original Code</h3><pre>"+data.original_code+"</pre></div>"+
+
+"<div><h3>Refined Code</h3><pre>"+data.refined_code+"</pre></div>"+
+
+"</div>"+
+
+"<h3>Code Quality Score</h3><h2>"+data.score+" / 10</h2>"+
+
+"<h3>Code Complexity</h3><p>"+data.complexity+"</p>"+
+
+"<h3>Suggestions</h3><ul>"+
+
+data.suggestions.map(s => "<li>"+s+"</li>").join("")+
+
+"</ul>"+
+
+"<h3>Analysis</h3><pre>"+data.analysis+"</pre>"+
+
+"<h3>AI Explanation</h3><p>"+data.explanation+"</p>";
+
+});
+
+}
+
+function copyCode(){
+
+navigator.clipboard.writeText(refinedCode);
+
+alert("Refined code copied!");
+
+}
+
+function downloadCode(){
+
+let blob = new Blob([refinedCode], {type:"text/plain"});
+
+let link = document.createElement("a");
+
+link.href = URL.createObjectURL(blob);
+
+link.download = "refined_code.py";
+
+link.click();
+
+}
+
+</script>
+
+</body>
+</html>
